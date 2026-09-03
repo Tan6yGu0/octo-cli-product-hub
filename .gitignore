@@ -1,0 +1,15 @@
+# 凭据
+*.token
+*.key
+*.env
+.env
+
+# 运行状态（可选保留）
+# runs/*.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

@@ -1,0 +1,109 @@
+# Label 体系 — 同步到 GitHub Issues
+# 用 scripts/sync_labels.py 一键同步
+
+labels:
+  # 类型
+  - name: type/bug
+    color: d73a4a
+    description: 功能不符合预期或崩溃
+  - name: type/feature
+    color: a2eeef
+    description: 新功能或增强
+  - name: type/docs
+    color: 0075ca
+    description: 文档改进
+  - name: type/question
+    color: d876e3
+    description: 使用疑问
+  - name: type/prd
+    color: 0e8a16
+    description: 产品需求文档
+  - name: type/review
+    color: fbca04
+    description: 代码/方案 review
+
+  # 优先级
+  - name: priority/P0
+    color: b60205
+    description: 阻断使用，必须立即处理
+  - name: priority/P1
+    color: d93f0b
+    description: 高优先级，当天处理
+  - name: priority/P2
+    color: e99695
+    description: 中优先级
+  - name: priority/P3
+    color: c5def5
+    description: 低优先级
+
+  # 状态
+  - name: status/new
+    color: cccccc
+    description: 新建未分诊
+  - name: status/triaged
+    color: 0e8a16
+    description: 已分诊，待处理
+  - name: status/need-info
+    color: fbca04
+    description: 需要补充信息
+  - name: status/prd-draft
+    color: 5319e7
+    description: PRD 撰写中
+  - name: status/reviewing
+    color: fbca04
+    description: 正在 review
+  - name: status/changes-requested
+    color: d93f0b
+    description: review 后需修改
+  - name: status/accepted
+    color: 0e8a16
+    description: review 通过
+  - name: status/wontfix
+    color: cccccc
+    description: 不予修复（区别于已修复）
+  - name: status/done
+    color: 0e8a16
+    description: 已完成
+
+  # 模块
+  - name: area/auth
+    color: 1d76db
+    description: 认证 & token 管理
+  - name: area/config
+    color: 1d76db
+    description: 配置 & 环境变量
+  - name: area/transport
+    color: 1d76db
+    description: HTTP 传输 & 重试
+  - name: area/output
+    color: 1d76db
+    description: 输出格式 & 错误信封
+  - name: area/flags
+    color: 1d76db
+    description: 全局/命令行 flag
+  - name: area/domain
+    color: 1d76db
+    description: 业务域命令（message/group/drive...）
+  - name: area/install
+    color: 1d76db
+    description: 安装 & 发布
+  - name: area/security
+    color: 1d76db
+    description: 安全 & 凭据存储
+  - name: area/skills
+    color: 1d76db
+    description: 内嵌 Skill 文档
+  - name: area/unknown
+    color: cccccc
+    description: 未知模块，待分诊
+
+  # 来源
+  - name: source/octo-exam
+    color: c5def5
+    description: 考试场景产生
+  - name: source/user-feedback
+    color: c5def5
+    description: 用户反馈
+  - name: source/agent-detected
+    color: c5def5
+    description: Bot 自动巡检发现
