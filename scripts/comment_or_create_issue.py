@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--title", required=True)
     ap.add_argument("--body", required=True, help="正文字符串或文件路径")
     ap.add_argument("--feedbacker", required=True)
+    ap.add_argument("--feedbacker-uid", default="", help="Octo UID of original feedbacker, if known")
     ap.add_argument("--duplicate-number", type=int, help="若确认重复，追加到该 issue")
     ap.add_argument("--type", default="feature", choices=["bug", "feature", "docs", "question", "prd", "review"])
     ap.add_argument("--priority", default="P2", choices=["P0", "P1", "P2", "P3"])
@@ -75,6 +76,7 @@ def main():
             "url": url,
             "query": args.query,
             "feedbacker": args.feedbacker,
+            "feedbacker_uid": args.feedbacker_uid,
             "title": args.title,
         }, ensure_ascii=False) + "\n")
 

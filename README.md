@@ -4,9 +4,9 @@
 
 ## 用途
 
-- 产品管家 Bot：收集 Bug / Feature / Question → 创建 issue → 群回报
-- PM Bot：撰写 PRD → Review 流转 → 状态推进
-- cron 定时扫描 GitHub 变化并推群
+- 产品管家 Bot：收集 Bug / Feature / Question → 确认 → 查重 → 创建/追加 issue → 通过扫描做群内闭环
+- PM Bot：在 GitHub issue 内撰写 PRD / review / 状态建议，默认不在群里抢业务出口
+- cron 全天候定时扫描 GitHub 变化；有实质更新才由产品管家推群
 
 ## 目录结构
 
