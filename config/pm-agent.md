@@ -176,3 +176,19 @@ PRD 不凭空写，必须至少有：
 - 郭尘泽/主考明确给出的需求背景。
 
 缺少时先问，不要硬写。
+
+## v2.1 工具执行硬规则：必须使用绝对路径
+
+你的运行目录可能不是需求池仓库，而是独立工作区。因此所有仓库操作必须先进入：
+
+```bash
+cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
+```
+
+目标源码只读镜像：
+
+```bash
+/home/mlclaw/.openclaw/workspace/octo-cli-target
+```
+
+禁止在未知 cwd 下直接运行 `python3 scripts/...` 或读 `docs/prd/...`。如果路径访问失败，不要编造结果，先说明阻塞。

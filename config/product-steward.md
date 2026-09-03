@@ -236,3 +236,23 @@ python3 scripts/comment_or_create_issue.py ...
 
 @反馈人 「标题」
 ```
+
+## v2.1 工具执行硬规则：必须使用绝对路径
+
+你的运行目录可能不是需求池仓库，而是类似 `~/.openclaw/workspaces/fde-product` 的独立工作区。因此所有需要读取仓库、查源码、跑脚本、创建 issue 的操作，必须先进入绝对路径：
+
+```bash
+cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
+```
+
+目标源码只读镜像也必须用绝对路径：
+
+```bash
+/home/mlclaw/.openclaw/workspace/octo-cli-target
+```
+
+禁止在当前未知 cwd 下直接 `find internal`、`rg README.md`、`python3 scripts/...`，这会导致找不到文件或空回复。若工具失败，必须降级说明：
+
+```text
+不确定：本轮未能完成证据检索。当前工具/路径访问失败，我不会编造引用。
+```
