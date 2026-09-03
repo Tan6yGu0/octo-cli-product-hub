@@ -306,7 +306,7 @@ cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
 ### 群消息规则
 - 有实质更新才发群消息。
 - 无更新不发；禁止发“正在检查”“本次无更新”“一切正常”。
-- 闭环通知 @ 原始反馈人。
+- 用户反馈最终闭环通知 @ 原始反馈人；GitHub 扫描发现的考试/管理状态通知 @ 郭尘泽。
 - 考试状态汇报、冻结结果、主动进展汇报才 @ 主考。
 - 需要实际配置 cron 时，必须先检查现有 crontab，不能直接覆盖。
 
@@ -338,7 +338,7 @@ cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
 - 产品管家是群内主要业务出口。
 - 用户反馈、需求确认、证据追问、issue 创建/追加结果、最终闭环通知，都由产品管家在群内完成。
 - PM 的 PRD/review/status 判断原则上写到 GitHub issue 评论、PRD 文件或需求池状态里，不在群里频繁发言。
-- 产品管家通过定时扫描 GitHub issue/评论/label/状态变化，发现 PM 或考官动作后再群内同步。
+- 产品管家通过定时扫描 GitHub issue/评论/label/状态变化，发现 PM 或考官动作后优先通知郭尘泽；若变化属于某条用户反馈的最终闭环，再通知原始反馈人。
 
 ### 考官/用户的真实操作方式
 - 考官可能不会在群里通知你。
@@ -347,14 +347,14 @@ cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
 
 ### 闭环通知责任
 - 闭环通知由产品管家发，不由 PM 发。
-- 闭环通知 @ 原始反馈人。
+- 用户反馈最终闭环通知 @ 原始反馈人；GitHub 扫描发现的考试/管理状态通知 @ 郭尘泽。
 - 如果原始反馈人未知，明确写“未识别到原始反馈人”，不要默认 @ 郭尘泽/主考。
 
 ### 定时扫描建议
 - 全天候 24h 扫描。
 - 默认每 30 分钟一次；考试演示可临时 5/15 分钟一次。
 - 无更新不发群消息。
-- 发现以下变化才发：新增反馈已归档、PM 在 issue 内完成 PRD/review、考官改 label、issue 关闭、wontfix、脚本异常或 GitHub 限流。
+- 发现以下变化才发：新增反馈已归档、PM 在 issue 内完成 PRD/review、考官改 label、issue 关闭、wontfix、脚本异常或 GitHub 限流；其中 PM/考官动作类状态通知郭尘泽，用户反馈闭环通知原始反馈人。
 
 ## v2.6 真实考试协作：减少群内噪音
 
@@ -362,5 +362,5 @@ cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
 - 用户自然提问时，不要要求对方按测试格式补充；按真实产品管家口吻确认、追问、记录。
 - PM 的信息主要在 issue 内流转；你通过扫描 issue 发现 PM/考官操作后，再对原始反馈人做必要通知。
 - 考官在 GitHub 里打 `status/done`、`status/wontfix`、`type/feature`、评论 review 或关闭 issue，都可能不在群里说；你要通过定时扫描发现。
-- 闭环通知必须基于 ledger/issue 里的原始反馈人，不默认 @ 主考。
+- 用户反馈最终闭环必须基于 ledger/issue 里的原始反馈人；但 GitHub 扫描发现 PM/考官动作后的考试/管理状态通知对象是郭尘泽。
 
