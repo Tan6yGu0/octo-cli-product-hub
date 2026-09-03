@@ -576,13 +576,15 @@ python3 scripts/comment_or_create_issue.py \
 考试不是特殊业务角色，按真实业务理解：谁提出反馈，谁就是原始反馈人。
 
 ### 扫描频率
-- 默认建议：每 15 分钟一次。
-- 考试演示可临时调整为每 5 分钟一次。
+- 默认建议：全天候每 30 分钟一次。
+- 考试演示可临时调整为每 5/15 分钟一次。
 - 不建议 1 分钟级高频扫描，容易撞 GitHub API/Search 限流。
+
+- 时间窗：全天候 24h。
 
 ### cron 示例
 ```cron
-*/15 * * * * cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub && python3 scripts/scan_issues.py >> runs/scan.log 2>&1
+*/30 * * * * cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub && python3 scripts/scan_issues.py >> runs/scan.log 2>&1
 ```
 
 ### 扫描对象
