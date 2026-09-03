@@ -145,3 +145,26 @@ octo-cli QC 专家
 6. PM/QC review 阶段用 `in_review`。
 7. 超过约定时间未更新的 `todo` / `in_progress` / `blocked`，产品管家或专家团 leader 必须巡检并在负责人反馈专区提醒郭尘泽。
 8. 只有 GitHub 状态正确、QC 通过、产品管家完成原始反馈人通知后，父任务才能 `done`。
+
+
+## Stable Loop Task Identity Rules
+长周期需求必须有稳定、可回查的 Loop 任务身份，避免 GitHub 处理完成后回流时定位不到原任务。
+
+硬规则：
+1. 产品管家创建 Loop 父任务时，任务标题必须带独立序号和短 slug：
+   - 格式：`FDE-FB-001｜<短标题>`、`FDE-FB-002｜<短标题>`。
+   - 序号递增，不复用；如果系统已有 issue key，可同时保留系统 key。
+2. Loop 任务描述必须记录：
+   - `loop_task_id`：Loop 任务 ID / key。
+   - `loop_task_title`：完整任务标题。
+   - `feedback_seq`：如 `FDE-FB-001`。
+   - `feedbacker_name` / `feedbacker_uid`。
+3. GitHub 专家创建或追加 GitHub issue 时，issue 正文必须写入：
+   - `Loop task id/key`。
+   - `Loop task title`。
+   - `feedback_seq`。
+   - `feedbacker_name` / `feedbacker_uid`。
+4. GitHub issue 的每次 PM 判断、QC 验收、状态更新评论，都必须带 `Loop task: <id/key> / <title>`，方便反向定位。
+5. 回到 Loop 时，任何专家必须优先使用 GitHub issue 正文/评论里的 `Loop task id/key` 定位原任务；不要靠模糊标题搜索。
+6. 如果缺失 Loop task id/key，GitHub 专家或 QC 必须标记 `blocked`，在负责人反馈专区提醒郭尘泽补充映射，不允许凭猜测回错任务。
+7. GitHub issue 标题可以不带 `feedback_seq`，但正文必须带；Loop 任务标题必须带。
