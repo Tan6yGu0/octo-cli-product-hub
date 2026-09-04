@@ -204,7 +204,7 @@ def owner_message(ev: dict[str, Any]) -> str:
     loop = ledger.get("loop_task_key") or ledger.get("loop_task_id") or "未找到 Loop 映射"
     stage = ev.get("stage") or "普通状态变化"
     next_action = {
-        "accepted": "阶段性闭环：负责人已知；最长 Bot 可回原群同步“已采纳/等待实现”。",
+        "accepted": "阶段性闭环：负责人已知；最长 Bot 回原群同步“已采纳/等待实现”；Loop 进入 blocked(waiting_on=upstream_implementation)，不是最终完成。",
         "done": "最终闭环：同步负责人，并由最长 Bot 回原群通知已完成/关闭。",
         "wontfix": "最终闭环：同步负责人，并由最长 Bot 回原群通知暂不处理。",
         "in_progress": "处理进展：同步负责人，继续等待实现/后续状态。",
@@ -272,10 +272,15 @@ def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
     }
     if stage:
         metadata["pipeline_status"] = stage
+    if stage == "accepted":
+        metadata["waiting_on"] = "upstream_implementation"
+        metadata["closure_semantics"] = "accepted_is_stage_closure_not_final_done"
     if stage == "wontfix":
         metadata["decision"] = "wontfix"
+        metadata["waiting_on"] = "none_final_closed"
     elif stage == "done":
         metadata["decision"] = "done"
+        metadata["waiting_on"] = "none_final_closed"
 
     for k, v in metadata.items():
         r = run([
@@ -291,7 +296,10 @@ def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
     elif stage == "wontfix":
         desired_status = "cancelled"
     elif stage == "accepted":
-        desired_status = "in_review"
+        # Accepted means product triage is complete, but implementation is external
+        # to this read-only feedback workspace. Keep the Loop parent open as a
+        # waiting state, not done. Final closure is only done/closed/wontfix.
+        desired_status = "blocked"
     if desired_status:
         r = run([
             "octo-daemon", "--workspace-id", workspace_id,
@@ -306,6 +314,7 @@ def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
         f"- Change: {'; '.join(ev['reasons'])}\n"
         f"- Current: {cur.get('state')}/{cur.get('status') or '-'}\n"
         f"- Stage: {stage or 'generic'}\n"
+        "- Closure semantics: accepted=阶段性闭环/等待上游实现；done/closed/wontfix=最终闭环。\n"
         "\n该记录由 exam_issue_watcher.py 定时扫描生成。"
     )
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".md", delete=False) as f:

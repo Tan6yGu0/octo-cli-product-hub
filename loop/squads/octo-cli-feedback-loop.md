@@ -28,7 +28,12 @@ python3 scripts/exam_issue_watcher.py --send --loop
 职责拆分：
 - 负责人反馈专区：同步所有外部操作、状态变化、Loop 映射、下一步建议，带 issue 链接。
 - 主群：只有 `accepted` / `done` / `wontfix` 等需要用户知道的节点，才 @ 原始反馈人简短闭环，默认不带链接。
-- Loop：能从 ledger 找到 `loop_task_id` 时，自动写 metadata/comment，并按 `accepted→in_review`、`done→done`、`wontfix→cancelled` 同步状态。
+- Loop：能从 ledger 找到 `loop_task_id` 时，自动写 metadata/comment，并按 `accepted→blocked(waiting_on=upstream_implementation)`、`done→done`、`wontfix→cancelled` 同步状态。accepted 是阶段性闭环，不是最终完成。
+
+状态语义：
+- `status/accepted` / PM-QC 通过 = 阶段性闭环：需要通知负责人和原始反馈人“已采纳，等待实现/排期”，Loop 保持 blocked 等上游实现。
+- `status/done` 或 GitHub CLOSED = 最终完成闭环：Loop 才能 done，并回主群最终通知。
+- `status/wontfix` = 最终不处理闭环：Loop cancelled，并回主群说明暂不处理。
 
 注意：`octo-cli loop task get/list` 对历史 FDE-2 返回 404 不等于任务没有执行；必要时以 `octo-daemon` issue/task 视图和 daemon journal 作为执行证据。不要因此重建 FDE-1/FDE-2 或重复处理 GitHub issue #3。
 

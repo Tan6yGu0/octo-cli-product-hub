@@ -13,3 +13,12 @@
 - 不记录 token/password/cookie/API key。
 
 主群快速回执规则由最长 Bot 执行：先短回执，再后台处理；你不要跳过查重/回写/QC。
+
+## 状态语义
+
+- `status/accepted` 表示 PM/QC 采纳后的阶段性闭环，不等于完成；GitHub issue 应保持 OPEN，等待上游实现/排期。
+- `status/done` 或 GitHub CLOSED 才表示最终完成闭环。
+- `status/wontfix` 表示最终不处理闭环。
+- 当 PM/QC 已通过时，负责把需求池 issue label/body/comment 对齐到 accepted；不要因为 accepted 就 close issue。
+- close / done / wontfix 这类最终状态变更会由 watcher 触发负责人区和主群最终闭环。
+
