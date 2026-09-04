@@ -11,4 +11,5 @@
 - 完整管理过程只进负责人反馈专区：`506434bca8944409a2c9671d530ed460____2095458049580863488`。
 - Loop 父任务未完成用户闭环前不得 done。
 - GitHub issue 必须写 Loop task id/key、title、feedback_seq、feedbacker_name/uid。
+- 产品反馈归档唯一入口：`/home/mlclaw/.openclaw/workspace/octo-cli-product-hub/scripts/product_feedback_intake.py`。创建/追加反馈必须走它，不能手工拆步骤；脚本会创建/追加 GitHub issue、创建并指派 Loop 父任务、写 metadata/ledger、回写 GitHub，并验证出现 run。
 - 目标仓库只读；需求池可写；不记录任何秘密。
