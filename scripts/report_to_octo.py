@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Format issue/PRD changes for the product steward's group notification.
+"""Format issue/PRD changes for the single-entry product steward workflow.
 
-This script only prints the message body; the product steward decides whether to send it.
+This script only prints the message body; the caller decides where to send it.
 Rules:
-- Empty changes => print nothing and exit 0 (no group message).
-- Business notifications mention original feedbackers when available.
-- PM is not a group-facing bot by default; PM writes issue comments, then the product steward scans and notifies.
+- Empty changes => print nothing and exit 0 (no message).
+- Management notifications go to the owner feedback thread, not the main group.
+- User closure notifications mention original feedbackers in the original group.
+- User-facing closure text defaults to no issue URL; add trace links only on request.
+- PM/GitHub/QC experts are background roles by default.
 """
 import argparse
 import json
@@ -22,7 +24,7 @@ def mention(person):
     return "反馈人未知"
 
 
-def format_change(c, owner):
+def format_change(c, owner, scope="owner"):
     num = c.get("number", "?")
     title = c.get("title", "")
     url = c.get("url", "")
@@ -37,15 +39,17 @@ def format_change(c, owner):
             targets = "反馈人未知"
         reason = notify.get("reason", "")
         result = "已完成/已关闭" if reason in {"closed", "status/done"} else "已关闭为 wontfix"
-        return f"{targets} [产品管家] 闭环通知：需求池 issue #{num} {result}。\n标题：{title}\n链接：{url}"
+        if scope == "feedbacker":
+            return f"{targets} [产品管家] 你反馈的「{title}」{result}。\n处理结果：已完成需求池闭环。需要追溯详情我可以再补 issue 编号/链接。"
+        return f"{mention(owner)} [产品管家] 负责人同步：issue #{num} 已到用户闭环节点。\n标题：{title}\n原始反馈人：{targets}\n建议动作：由最长 Bot 回原群通知处理结果，默认不带链接。\n追溯：{url}"
 
     if notify.get("audience") == "product-steward":
         target = mention(owner)
-        return f"{target} [产品管家] 需求池 issue #{num} 状态有更新：{status}\n标题：{title}\n链接：{url}"
+        return f"{target} [产品管家] 负责人同步：需求池 issue #{num} 状态有更新：{status}\n标题：{title}\n链接：{url}"
 
-    # New or generic GitHub scan changes are exam/management status, not user feedback closure.
+    # New or generic GitHub scan changes are management status, not user-facing closure.
     target = mention(owner)
-    return f"{target} [产品管家] 需求池 issue #{num} 有更新：{status}\n标题：{title}\n链接：{url}"
+    return f"{target} [产品管家] 负责人同步：需求池 issue #{num} 有更新：{status}\n标题：{title}\n链接：{url}"
 
 
 def main():
@@ -54,6 +58,7 @@ def main():
     ap.add_argument("--bot", default="产品管家")
     ap.add_argument("--owner-name", default="郭尘泽", help="Owner/main examiner to notify for GitHub scan management status")
     ap.add_argument("--owner-uid", default="0cb0e235d14443d88f8803f54e19faf4", help="Owner Octo UID for GitHub scan management status")
+    ap.add_argument("--scope", choices=["owner", "feedbacker"], default="owner", help="Format for fixed delivery target: owner feedback thread or original feedbacker group")
     args = ap.parse_args()
 
     changes = json.loads(args.changes)
@@ -61,7 +66,7 @@ def main():
         return
 
     owner = {"name": args.owner_name, "uid": args.owner_uid}
-    messages = [format_change(c, owner) for c in changes if c.get("notify")]
+    messages = [format_change(c, owner, args.scope) for c in changes if c.get("notify")]
     if not messages:
         return
     print("\n\n".join(messages))

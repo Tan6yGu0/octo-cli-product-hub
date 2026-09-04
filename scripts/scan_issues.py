@@ -14,12 +14,13 @@ import json
 import os
 import subprocess
 import sys
+import shutil
 
 DONE_LABELS = {"status/done", "status/wontfix"}
 
 
 def gh_json(*args, repo=None):
-    cmd = ["gh"]
+    cmd = [shutil.which("gh") or "/home/mlclaw/.local/bin/gh"]
     if repo:
         cmd += ["--repo", repo]
     cmd += list(args)
@@ -113,7 +114,7 @@ def main():
                 "feedbackers": feedbackers.get(num, []),
                 "fallback": "反馈人未知" if not feedbackers.get(num) else "",
             }
-        elif new_status and old_status != new_status:
+        elif previous is not None and new_status and old_status != new_status:
             notify = {"audience": "product-steward", "reason": "status-change"}
 
         changes.append({"number": num, "type": kind, **current, "previous": previous, "notify": notify})

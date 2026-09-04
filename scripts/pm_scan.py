@@ -2,10 +2,10 @@
 """PM 扫描：检查 PRD 和 review 相关 issue 状态变化。
 用法: python3 scripts/pm_scan.py [--state-file runs/pm-scan-state.json]
 """
-import argparse, json, os, subprocess, sys
+import argparse, json, os, subprocess, sys, shutil
 
 def gh_json(*args, repo=None):
-    cmd = ["gh"]
+    cmd = [shutil.which("gh") or "/home/mlclaw/.local/bin/gh"]
     if repo:
         cmd += ["--repo", repo]
     cmd += list(args)
