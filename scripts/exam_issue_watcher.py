@@ -20,6 +20,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import fcntl
 import pathlib
 import shutil
 import subprocess
@@ -350,6 +351,13 @@ def main() -> None:
     ap.add_argument("--loop", action="store_true", help="synchronize Loop task metadata/status/comment when possible")
     ap.add_argument("--dry-run", action="store_true", help="print planned actions only")
     args = ap.parse_args()
+
+    # Prevent cron/manual overlap from emitting duplicate owner/user notices or
+    # duplicate Loop comments for the same GitHub transition.
+    lock_path = args.state_file + ".lock"
+    pathlib.Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
+    lock_fh = open(lock_path, "w")
+    fcntl.flock(lock_fh, fcntl.LOCK_EX)
 
     issues = gh_json(
         "issue", "list", "--state", "all",
