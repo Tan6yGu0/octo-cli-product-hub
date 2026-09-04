@@ -31,6 +31,7 @@ from typing import Any
 DEFAULT_REPO = "Tan6yGu0/octo-cli-product-hub"
 DEFAULT_LEDGER = "runs/feedback-ledger.jsonl"
 DEFAULT_STATE = "runs/exam-issue-watch-state.json"
+DEFAULT_CHANNEL_CONFIG = "config/fde_channels.json"
 DEFAULT_LOOP_WORKSPACE_ID = "bb4a2752-e52a-4f89-b768-ef1941ee68d2"
 DEFAULT_OWNER_CHANNEL_ID = "506434bca8944409a2c9671d530ed460____2095458049580863488"
 DEFAULT_OWNER_CHANNEL_TYPE = 5
@@ -79,6 +80,21 @@ def save_json(path: str, data: Any) -> None:
     p = pathlib.Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_channel_config(path: str) -> dict[str, Any]:
+    p = pathlib.Path(path)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise RuntimeError(f"invalid channel config {path}: {e}")
+
+
+def cfg_get(cfg: dict[str, Any], section: str, key: str, default: Any) -> Any:
+    value = (cfg.get(section) or {}).get(key)
+    return default if value in (None, "") else value
 
 
 def label_names(issue: dict[str, Any]) -> list[str]:
@@ -141,6 +157,12 @@ def load_ledger(path: str) -> dict[int, dict[str, Any]]:
 
 
 def mention(person: dict[str, str]) -> str:
+    """Management-thread mention syntax.
+
+    This is only for owner/management messages. User-facing messages sent via
+    octo-cli raw payload should not use the bracket mention form because it may
+    render as the literal internal id in some clients.
+    """
     uid = person.get("uid") or ""
     name = person.get("name") or ""
     if uid and name:
@@ -148,6 +170,11 @@ def mention(person: dict[str, str]) -> str:
     if name:
         return f"@{name}"
     return "反馈人未知"
+
+
+def display_name(person: dict[str, str]) -> str:
+    name = person.get("name") or "反馈人"
+    return name if name.startswith("@") else f"@{name}"
 
 
 def diff_event(previous: dict[str, Any] | None, current: dict[str, Any], ledger: dict[str, Any]) -> dict[str, Any] | None:
@@ -226,21 +253,25 @@ def owner_message(ev: dict[str, Any]) -> str:
 def user_message(ev: dict[str, Any]) -> str:
     cur = ev["current"]
     people = (ev.get("ledger") or {}).get("feedbackers") or []
-    targets = " ".join(mention(p) for p in people) if people else "反馈人未知"
+    targets = "、".join(display_name(p) for p in people) if people else "@反馈人"
+    title = cur.get("title") or "这条反馈"
     if ev.get("stage") == "accepted":
         return (
-            f"{targets} 你反馈的「{cur['title']}」已完成产品分诊并被采纳。\n"
-            "处理结果：已进入需求池跟踪，后续等待实现/排期；有进展我再同步。"
+            "📋 进展通知\n"
+            "以下反馈已采纳，后续等待实现/排期：\n"
+            f"{targets} 「{title}」"
         )
     if ev.get("stage") == "done":
         return (
-            f"{targets} 你反馈的「{cur['title']}」已完成/关闭。\n"
-            "处理结果：需求池已到完成状态。需要追溯详情我可以再补 issue 编号/链接。"
+            "📋 闭环通知\n"
+            "以下反馈已修复/关闭，感谢大家 🎉\n"
+            f"{targets} 「{title}」"
         )
     if ev.get("stage") == "wontfix":
         return (
-            f"{targets} 你反馈的「{cur['title']}」已关闭为暂不处理。\n"
-            "处理结果：产品侧已记录结论；如你需要，我可以补充原因和 issue 编号。"
+            "📋 闭环通知\n"
+            "以下反馈本次暂不处理，已记录结论：\n"
+            f"{targets} 「{title}」"
         )
     return ""
 
@@ -337,20 +368,33 @@ def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default=DEFAULT_CHANNEL_CONFIG, help="FDE channel/workspace config JSON")
     ap.add_argument("--repo", default=DEFAULT_REPO)
     ap.add_argument("--ledger", default=DEFAULT_LEDGER)
     ap.add_argument("--state-file", default=DEFAULT_STATE)
-    ap.add_argument("--loop-workspace-id", default=DEFAULT_LOOP_WORKSPACE_ID)
-    ap.add_argument("--owner-channel-id", default=DEFAULT_OWNER_CHANNEL_ID)
-    ap.add_argument("--owner-channel-type", type=int, default=DEFAULT_OWNER_CHANNEL_TYPE)
-    ap.add_argument("--main-channel-id", default=DEFAULT_MAIN_CHANNEL_ID)
-    ap.add_argument("--main-channel-type", type=int, default=DEFAULT_MAIN_CHANNEL_TYPE)
+    ap.add_argument("--loop-workspace-id")
+    ap.add_argument("--owner-channel-id")
+    ap.add_argument("--owner-channel-type", type=int)
+    ap.add_argument("--main-channel-id")
+    ap.add_argument("--main-channel-type", type=int)
+    ap.add_argument("--owner-name")
+    ap.add_argument("--owner-uid")
     ap.add_argument("--limit", type=int, default=100)
     ap.add_argument("--init", action="store_true", help="snapshot current state and send/update nothing")
     ap.add_argument("--send", action="store_true", help="send owner/user messages through octo-cli")
     ap.add_argument("--loop", action="store_true", help="synchronize Loop task metadata/status/comment when possible")
     ap.add_argument("--dry-run", action="store_true", help="print planned actions only")
     args = ap.parse_args()
+
+    cfg = load_channel_config(args.config)
+    args.loop_workspace_id = args.loop_workspace_id or cfg_get(cfg, "loop", "workspace_id", DEFAULT_LOOP_WORKSPACE_ID)
+    args.owner_channel_id = args.owner_channel_id or cfg_get(cfg, "owner_thread", "channel_id", DEFAULT_OWNER_CHANNEL_ID)
+    args.owner_channel_type = args.owner_channel_type or int(cfg_get(cfg, "owner_thread", "channel_type", DEFAULT_OWNER_CHANNEL_TYPE))
+    args.main_channel_id = args.main_channel_id or cfg_get(cfg, "main_group", "channel_id", DEFAULT_MAIN_CHANNEL_ID)
+    args.main_channel_type = args.main_channel_type or int(cfg_get(cfg, "main_group", "channel_type", DEFAULT_MAIN_CHANNEL_TYPE))
+    owner_name = args.owner_name or cfg_get(cfg, "owner", "name", OWNER["name"])
+    owner_uid = args.owner_uid or cfg_get(cfg, "owner", "uid", OWNER["uid"])
+    OWNER.update({"name": owner_name, "uid": owner_uid})
 
     # Prevent cron/manual overlap from emitting duplicate owner/user notices or
     # duplicate Loop comments for the same GitHub transition.
@@ -381,20 +425,42 @@ def main() -> None:
 
     actions: list[dict[str, Any]] = []
     notified = load_json(args.state_file + ".notified", {})
+    user_notified = load_json(args.state_file + ".user_notified", {})
     for ev in events:
         key = str(ev["number"])
         stage = ev.get("stage") or "generic"
         notify_key = f"{ev['current'].get('updatedAt')}|{stage}|{'/'.join(ev['reasons'])}"
-        already = notify_key in set(notified.get(key, []))
+        legacy_notices = set(notified.get(key, []))
+        already = notify_key in legacy_notices
         owner = owner_message(ev)
         user = user_message(ev) if stage in {"accepted", "done", "wontfix"} else ""
+
+        # Owner/management notices are per GitHub transition. User-facing closure
+        # notices are per issue+stage. This prevents repeated "done" messages when
+        # a closed issue receives later label/comment churn. Legacy transition
+        # records are treated as already sent so adding this guard does not resend
+        # old closures after deployment.
+        sent_user_stages = set(user_notified.get(key, []))
+        legacy_user_already = any(f"|{stage}|" in item for item in legacy_notices)
+        user_already = stage in sent_user_stages or legacy_user_already
+
         loop_actions: list[str] = []
         if not already and args.loop and not args.dry_run:
             loop_actions = loop_update(ev, workspace_id=args.loop_workspace_id)
         if not already and args.send and not args.dry_run:
             send_octo(args.owner_channel_id, args.owner_channel_type, owner)
-            if user and (ev.get("ledger") or {}).get("feedbackers"):
-                send_octo(args.main_channel_id, args.main_channel_type, user)
+        user_sent = False
+        if (
+            user
+            and (ev.get("ledger") or {}).get("feedbackers")
+            and not user_already
+            and args.send
+            and not args.dry_run
+        ):
+            send_octo(args.main_channel_id, args.main_channel_type, user)
+            sent_user_stages.add(stage)
+            user_notified[key] = sorted(sent_user_stages)
+            user_sent = True
         if not already:
             notified.setdefault(key, []).append(notify_key)
         actions.append({
@@ -403,12 +469,15 @@ def main() -> None:
             "reasons": ev["reasons"],
             "owner_message": owner,
             "user_message": user,
+            "user_already_notified": user_already,
+            "user_sent": user_sent,
             "loop_actions": loop_actions,
             "already_notified": already,
         })
 
     save_json(args.state_file, current)
     save_json(args.state_file + ".notified", notified)
+    save_json(args.state_file + ".user_notified", user_notified)
     print(json.dumps({"ok": True, "events": actions}, ensure_ascii=False, indent=2))
 
 

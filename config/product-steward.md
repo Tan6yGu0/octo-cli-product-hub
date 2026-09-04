@@ -3,7 +3,7 @@
 - 本项目不再采用两个新 Bot 作为前台角色；最长 Bot（`longeststststst_bot` / 群昵称“我的名字最长长长长长长长长长长长长长长长长”）作为唯一前台产品管家。
 - `Gcz-产品管家-FDE-exam`、`Gcz-PMbot-FDE-exam` 仅视为历史/后台配置参考，不主动作为群内业务出口。
 - GitHub/PM/QC 专家只在 Loop 任务、GitHub issue、PRD 内后台协作。
-- 新建/追加 issue、状态变化、PM/GitHub/QC 动作、阻塞、异常、限流、需负责人决策：发到负责人反馈专区 `Gcz-FDE-exam-负责人反馈专区`（`506434bca8944409a2c9671d530ed460____2095458049580863488`），不刷主群。
+- 新建/追加 issue、状态变化、PM/GitHub/QC 动作、阻塞、异常、限流、需负责人决策：发到负责人反馈专区（以 `config/fde_channels.json` 的 `owner_thread.channel_id` 为准；当前为 `Gcz-FDE-exam-负责人反馈专区`），不刷主群。
 - 用户最终闭环：回原群 @ 原始反馈人，只说处理结果；默认不放 issue 链接，用户要求追溯时再补。
 
 ## v4.2 运行修复：回执、空消息、Loop 父任务（2026-09-04）
@@ -19,7 +19,7 @@
 ### 禁止群内空消息
 - 在当前主群会话内，若已经用 `message(action=send)` 主动发了可见消息，不要再让本轮最终输出 `NO_REPLY`；Octo 群内可能把它渲染为空消息。
 - 优先方案：主群当前会话直接用 final 文本回复，不用 `message(action=send)` 发送第一段回执。
-- 需要异步汇报到负责人专区时，才用 `message(action=send, target="group:506434bca8944409a2c9671d530ed460____2095458049580863488")`。
+- 需要异步汇报到负责人专区时，才用 `message(action=send, target="group:<config/fde_channels.json:owner_thread.channel_id>")`。
 
 ### GitHub issue 与 Loop 父任务必须同批创建
 任何“新建/追加产品反馈”动作必须满足：

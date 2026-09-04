@@ -24,6 +24,11 @@ def mention(person):
     return "反馈人未知"
 
 
+def display_name(person):
+    name = (person or {}).get("name") or "反馈人"
+    return name if name.startswith("@") else f"@{name}"
+
+
 def format_change(c, owner, scope="owner"):
     num = c.get("number", "?")
     title = c.get("title", "")
@@ -34,13 +39,14 @@ def format_change(c, owner, scope="owner"):
     if notify.get("audience") == "feedbacker":
         people = notify.get("feedbackers") or []
         if people:
-            targets = " ".join(mention(p) for p in people)
+            targets = "、".join(display_name(p) for p in people)
         else:
-            targets = "反馈人未知"
+            targets = "反馈人"
         reason = notify.get("reason", "")
-        result = "已完成/已关闭" if reason in {"closed", "status/done"} else "已关闭为 wontfix"
         if scope == "feedbacker":
-            return f"{targets} [产品管家] 你反馈的「{title}」{result}。\n处理结果：已完成需求池闭环。需要追溯详情我可以再补 issue 编号/链接。"
+            if reason in {"closed", "status/done"}:
+                return f"📋 闭环通知\n以下反馈已修复/关闭，感谢大家 🎉\n{targets} 「{title}」"
+            return f"📋 闭环通知\n以下反馈本次暂不处理，已记录结论：\n{targets} 「{title}」"
         return f"{mention(owner)} [产品管家] 负责人同步：issue #{num} 已到用户闭环节点。\n标题：{title}\n原始反馈人：{targets}\n建议动作：由最长 Bot 回原群通知处理结果，默认不带链接。\n追溯：{url}"
 
     if notify.get("audience") == "product-steward":

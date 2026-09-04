@@ -75,14 +75,9 @@ def load_feedbackers(path: str) -> dict[int, list[dict[str, str]]]:
     return feedbackers
 
 
-def mention(person: dict[str, str]) -> str:
-    uid = person.get("uid") or ""
-    name = person.get("name") or ""
-    if uid and name:
-        return f"@[{uid}:{name}]"
-    if name:
-        return f"@{name}"
-    return "反馈人未知"
+def display_name(person: dict[str, str]) -> str:
+    name = person.get("name") or "反馈人"
+    return name if name.startswith("@") else f"@{name}"
 
 
 def status_label(issue: dict[str, Any]) -> str:
@@ -102,22 +97,25 @@ def stage_for(issue: dict[str, Any]) -> str:
 
 
 def format_msg(issue: dict[str, Any], stage: str, people: list[dict[str, str]]) -> str:
-    targets = " ".join(mention(p) for p in people) if people else "反馈人未知"
-    title = issue.get("title") or ""
+    targets = "、".join(display_name(p) for p in people) if people else "@反馈人"
+    title = issue.get("title") or "这条反馈"
     if stage == "accepted":
         return (
-            f"{targets} 你反馈的「{title}」已完成产品分诊并被采纳。\n"
-            "处理结果：已进入需求池跟踪，PM/QC 已确认验收方向；后续等待实现/排期，有进展我再同步。"
+            "📋 进展通知\n"
+            "以下反馈已采纳，后续等待实现/排期：\n"
+            f"{targets} 「{title}」"
         )
     if stage == "done":
         return (
-            f"{targets} 你反馈的「{title}」已完成/关闭。\n"
-            "处理结果：需求池已到完成状态。需要追溯详情我可以再补 issue 编号/链接。"
+            "📋 闭环通知\n"
+            "以下反馈已修复/关闭，感谢大家 🎉\n"
+            f"{targets} 「{title}」"
         )
     if stage == "wontfix":
         return (
-            f"{targets} 你反馈的「{title}」已关闭为暂不处理。\n"
-            "处理结果：产品侧已记录结论；如你需要，我可以补充原因和 issue 编号。"
+            "📋 闭环通知\n"
+            "以下反馈本次暂不处理，已记录结论：\n"
+            f"{targets} 「{title}」"
         )
     return ""
 

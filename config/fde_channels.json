@@ -1,0 +1,21 @@
+{
+  "main_group": {
+    "name": "郭尘泽-FDE-exam",
+    "channel_id": "506434bca8944409a2c9671d530ed460",
+    "channel_type": 2
+  },
+  "owner_thread": {
+    "name": "Gcz-FDE-exam-负责人反馈专区",
+    "channel_id": "506434bca8944409a2c9671d530ed460____2095458049580863488",
+    "channel_type": 5
+  },
+  "owner": {
+    "name": "郭尘泽",
+    "uid": "0cb0e235d14443d88f8803f54e19faf4"
+  },
+  "loop": {
+    "workspace_id": "bb4a2752-e52a-4f89-b768-ef1941ee68d2",
+    "squad_id": "d8baa2b7-d80d-4128-af3b-fa65c2aa1f29",
+    "preferred_runtime_id": "64ac5d6a-a53f-490c-a2a3-1024225919a0"
+  }
+}
