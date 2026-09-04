@@ -17,3 +17,22 @@
 当前流程：主群短回执 → 理解反馈 → 必要追问 → 确认后查重 → 创建/追加 GitHub issue + Loop 父任务 → GitHub issue 回写 Loop task → PM/QC → 负责人区汇报 → 用户闭环。
 
 状态语义：todo 待处理；in_progress 处理中；in_review 等 PM/QC；blocked 等外部条件；done 必须 GitHub 状态正确 + QC 通过 + 用户闭环完成。
+
+## 考试外部操作 watcher（必须知道）
+
+考官/PM 可能直接在需求池 GitHub issue 上静默操作（close、reopen、打 `status/done`、`status/wontfix`、`status/accepted`、`type/feature` 等），不会在群里通知。
+
+必须依赖定时扫描脚本主动发现：
+
+```bash
+cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
+python3 scripts/exam_issue_watcher.py --send --loop
+```
+
+职责拆分：
+- 负责人反馈专区：同步所有外部操作、状态变化、Loop 映射、下一步建议，带 issue 链接。
+- 主群：只有 `accepted` / `done` / `wontfix` 等需要用户知道的节点，才 @ 原始反馈人简短闭环，默认不带链接。
+- Loop：能从 ledger 找到 `loop_task_id` 时，自动写 metadata/comment，并按 `accepted→in_review`、`done→done`、`wontfix→cancelled` 同步状态。
+
+注意：`octo-cli loop task get/list` 对历史 FDE-2 返回 404 不等于任务没有执行；必要时以 `octo-daemon` issue/task 视图和 daemon journal 作为执行证据。不要因此重建 FDE-1/FDE-2 或重复处理 GitHub issue #3。
+
