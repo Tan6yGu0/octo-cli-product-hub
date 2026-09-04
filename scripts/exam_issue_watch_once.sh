@@ -38,10 +38,10 @@ PY
     >/dev/null || true
 }
 
+# Best-effort code update only. GitHub network hiccups must not become
+# user-visible "scan failed" noise, and issue scanning does not depend on git pull.
 if ! git pull --ff-only --autostash >>"$LOG_DIR/exam-issue-watcher.log" 2>>"$LOG_DIR/exam-issue-watcher.err.log"; then
-  err=$(tail -c 500 "$LOG_DIR/exam-issue-watcher.err.log" | tr '\n' ' ')
-  notify_error "git_pull" "$OWNER [产品管家] 需求池外部操作扫描异常：git pull 失败，已停止本轮扫描。${err:+ 错误：$err}"
-  exit 0
+  echo "$(date -Is) WARN git pull failed; continue with current checkout" >>"$LOG_DIR/exam-issue-watcher.log"
 fi
 
 if ! python3 scripts/exam_issue_watcher.py --send --loop >>"$LOG_DIR/exam-issue-watcher.log" 2>>"$LOG_DIR/exam-issue-watcher.err.log"; then
