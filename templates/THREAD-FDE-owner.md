@@ -2,6 +2,12 @@
 
 本子区只接收管理汇总，不是普通用户反馈入口。
 
+## 当前模式
+- Gcz-产品管家-FDE-exam（`286xqdrbrou92265c5d_bot`）是 FDE / octo-cli 产品反馈闭环唯一前台产品管家。
+- 主群用户、负责人反馈专区、归档回执、阶段性进展、最终闭环，统一由 Gcz-产品管家-FDE-exam 对外表达。
+- 最长 Bot（`longeststststst_bot`）已停用为本链路前台；除非郭尘泽明确重新指定，不应处理、转发或发送 FDE / octo-cli 反馈闭环消息。
+- watcher/runner 发送身份必须是 `286xqdrbrou92265c5d_bot`；缺少凭证时应失败告警，不得自动回落到 longest/changming 等其他 Bot。
+
 ## 必须同步到本区
 - 新建/追加 issue 管理汇总。
 - PM/GitHub/QC 动作。
@@ -22,7 +28,13 @@
 ## watcher
 
 ```bash
-cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
+cd /home/mlclaw/.openclaw/workspaces/fde-product/octo-cli-product-hub
+bash scripts/exam_issue_watch_once.sh
+```
+
+核心脚本：
+
+```bash
 python3 scripts/exam_issue_watcher.py --config config/fde_channels.json --send --loop
 ```
 

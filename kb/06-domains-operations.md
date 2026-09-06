@@ -1,6 +1,6 @@
 # 业务域 & 命令树
 
-## 12 个活跃域，308 个操作
+## 12 个活跃域，322 个操作
 
 | 域 | 操作数 | 说明 |
 |----|--------|------|
@@ -61,3 +61,10 @@ octo-cli version
 命令树从嵌入的 OpenAPI 3.x spec 自动注册。新增端点只需编辑 spec，不需写代码。
 
 来源: README.md#L13-L22
+
+
+## marketplace / mail 域补充
+
+最新命令树包含 `marketplace` 和 `mail` 域；`marketplace` 已迁移到 unified plugin API，覆盖 plugin、review-request、category/tag、MCP probe 和 skill/icon upload 等命令；`mail` 覆盖 auth、mailbox、address、thread、message、draft 等命令。
+
+来源: CLAUDE.md#L44-L125, skills/octo-marketplace/SKILL.md#L11-L18

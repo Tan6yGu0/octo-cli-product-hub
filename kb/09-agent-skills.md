@@ -22,7 +22,7 @@ octo-cli skills --install <dir>    # 将所有 skill 写入目录
 | octo-drive | Drive |
 | octo-docs | 文档/表格/白板 |
 | octo-html | HTML 文档 |
-| octo-marketplace | 专家市场 |
+| octo-marketplace | 统一插件市场（Skill / MCP connector / Expert / Squad） |
 | octo-mail | 邮件 |
 | octo-loop | Fleet/Loop |
 
@@ -39,3 +39,10 @@ SKILL.md frontmatter 中 `disabled: true` 的 skill 不会出现在列表中，�
 Skill 目录下除 `SKILL.md` 外的 `*.md` 文件作为引用文件一并输出。
 
 来源: cmd/skills.go#L168-L186
+
+
+## Marketplace skill 更新
+
+`octo-marketplace` 通过统一 plugin API 管理 Skill、MCP connector、Expert、Squad；命令围绕 plugin list/get/version/skillmd/download/upsert/delete/install/import/publish/delist、review-request、category/tag、mcp probe 和上传解析等能力。
+
+来源: skills/octo-marketplace/SKILL.md#L11-L39, CLAUDE.md#L99-L108

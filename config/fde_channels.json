@@ -1,24 +1,55 @@
 {
+  "default_mode": "fde_octo_cli_feedback_steward",
+  "activation": {
+    "on_mention": true,
+    "requires_product_keyword": false,
+    "requires_group_context": false,
+    "non_feedback_mention_behavior": "ask_whether_to_record_as_octo_cli_feedback"
+  },
   "main_group": {
-    "name": "FDEtest",
-    "channel_id": "96ff636b15714513ab19f80b16e5c96e",
+    "name": "506434bca8944409a2c9671d530ed460",
+    "channel_id": "506434bca8944409a2c9671d530ed460",
     "channel_type": 2
   },
   "owner_thread": {
-    "name": "郭尘泽 DM（FDEtest 无负责人子区降级）",
-    "channel_id": "0cb0e235d14443d88f8803f54e19faf4",
-    "channel_type": 1
+    "name": "当前负责人反馈子区",
+    "channel_id": "506434bca8944409a2c9671d530ed460____2095458049580863488",
+    "channel_type": 5
   },
   "owner": {
     "name": "郭尘泽",
     "uid": "0cb0e235d14443d88f8803f54e19faf4"
+  },
+  "chief_examiner": {
+    "enabled": false,
+    "name": "",
+    "uid": "",
+    "policy": "when_configured_mention_in_every_exam_group_user_notice"
   },
   "loop": {
     "workspace_id": "bb4a2752-e52a-4f89-b768-ef1941ee68d2",
     "squad_id": "d8baa2b7-d80d-4128-af3b-fa65c2aa1f29",
     "preferred_runtime_id": "64ac5d6a-a53f-490c-a2a3-1024225919a0"
   },
+  "portable_mode": {
+    "enabled": true,
+    "when_added_to_new_group": "treat_current_group_as_main_group_on_mention",
+    "fallback_owner_channel": {
+      "name": "郭尘泽 DM（无负责人子区或不可写时降级）",
+      "channel_id": "0cb0e235d14443d88f8803f54e19faf4",
+      "channel_type": 1
+    }
+  },
   "expected_exam_group_names": [
+    "506434bca8944409a2c9671d530ed460",
     "FDEtest"
-  ]
+  ],
+  "feedback_sheet": {
+    "name": "郭尘泽-FDE-exam",
+    "doc_id": "d_a47749dd0a79f2f2e2528f4e",
+    "doc_type": "sheet",
+    "sheet_id": "default",
+    "write_owner": "Gcz-产品管家-FDE-exam",
+    "sync_policy": "intake_append_and_watcher_status_update"
+  }
 }

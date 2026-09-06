@@ -25,8 +25,13 @@ def mention(person):
 
 
 def display_name(person):
-    name = (person or {}).get("name") or "反馈人"
-    return name if name.startswith("@") else f"@{name}"
+    uid = (person or {}).get("uid") or ""
+    name = (person or {}).get("name") or ""
+    if uid and name:
+        return f"@[{uid}:{name}]"
+    if name:
+        return f"@{name}"
+    return "@反馈人"
 
 
 def format_change(c, owner, scope="owner"):
@@ -47,7 +52,7 @@ def format_change(c, owner, scope="owner"):
             if reason in {"closed", "status/done"}:
                 return f"📋 闭环通知\n以下反馈已修复/关闭，感谢大家 🎉\n{targets} 「{title}」"
             return f"📋 闭环通知\n以下反馈本次暂不处理，已记录结论：\n{targets} 「{title}」"
-        return f"{mention(owner)} [产品管家] 负责人同步：issue #{num} 已到用户闭环节点。\n标题：{title}\n原始反馈人：{targets}\n建议动作：由最长 Bot 回原群通知处理结果，默认不带链接。\n追溯：{url}"
+        return f"{mention(owner)} [产品管家] 负责人同步：issue #{num} 已到用户闭环节点。\n标题：{title}\n原始反馈人：{targets}\n建议动作：由Gcz-产品管家-FDE-exam 回原群通知处理结果，默认不带链接。\n追溯：{url}"
 
     if notify.get("audience") == "product-steward":
         target = mention(owner)

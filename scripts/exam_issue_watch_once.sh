@@ -3,7 +3,8 @@ set -euo pipefail
 
 export PATH="/home/mlclaw/.npm-global/bin:/home/mlclaw/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
-cd /home/mlclaw/.openclaw/workspace/octo-cli-product-hub
+HUB_DIR="${FDE_HUB_DIR:-/home/mlclaw/.openclaw/workspaces/fde-product/octo-cli-product-hub}"
+cd "$HUB_DIR"
 
 CHANNEL_CONFIG="${FDE_CHANNEL_CONFIG:-config/fde_channels.json}"
 OWNER="$(python3 - <<'PY'
@@ -52,11 +53,19 @@ if now - last < throttle:
 data[kind] = now
 path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
 PY
-  octo-cli --profile changming message send \
-    --channel-id "$OWNER_THREAD_ID" \
-    --channel-type 5 \
-    --data "$(python3 -c 'import json,sys; print(json.dumps({"payload":{"type":1,"content":sys.argv[1]}} , ensure_ascii=False))' "$text")" \
-    >/dev/null || true
+  if [ -n "${FDE_OCTO_PROFILE:-}" ]; then
+    octo-cli --profile "$FDE_OCTO_PROFILE" message send \
+      --channel-id "$OWNER_THREAD_ID" \
+      --channel-type 5 \
+      --data "$(python3 -c 'import json,sys; print(json.dumps({"payload":{"type":1,"content":sys.argv[1]}} , ensure_ascii=False))' "$text")" \
+      >/dev/null || true
+  else
+    octo-cli --bot-id "${FDE_OCTO_BOT_ID:-286xqdrbrou92265c5d_bot}" message send \
+      --channel-id "$OWNER_THREAD_ID" \
+      --channel-type 5 \
+      --data "$(python3 -c 'import json,sys; print(json.dumps({"payload":{"type":1,"content":sys.argv[1]}} , ensure_ascii=False))' "$text")" \
+      >/dev/null || true
+  fi
 }
 
 # Best-effort code update only. GitHub network hiccups must not become

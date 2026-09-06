@@ -4,8 +4,16 @@
 *.env
 .env
 
-# 运行状态（可选保留）
-# runs/*.json
+# 运行状态 / cron 日志（不提交）
+runs/*.log
+runs/*.err.log
+runs/*.cron.log
+runs/*.lock
+runs/*state*.json
+runs/*state*.json.*
+runs/tmp-*
+runs/*_body.md
+tmp_feedback_*.md
 
 # Python
 __pycache__/

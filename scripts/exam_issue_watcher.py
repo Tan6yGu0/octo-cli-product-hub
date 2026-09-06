@@ -6,7 +6,7 @@ Why this exists:
   mark wontfix/done/accepted, add type/feature, etc.) without notifying Octo.
 - The product steward must discover those changes via scheduled scanning,
   synchronize Loop state, notify the owner feedback thread, and when appropriate
-  close the loop with the original feedbacker in the main group.
+  close the loop with the original feedbacker in the original source group/chat.
 
 Default behavior is conservative:
 - First run or --init snapshots current GitHub state and sends nothing.
@@ -22,6 +22,7 @@ import json
 import os
 import fcntl
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -35,9 +36,10 @@ DEFAULT_CHANNEL_CONFIG = "config/fde_channels.json"
 DEFAULT_LOOP_WORKSPACE_ID = "bb4a2752-e52a-4f89-b768-ef1941ee68d2"
 DEFAULT_OWNER_CHANNEL_ID = "506434bca8944409a2c9671d530ed460____2095458049580863488"
 DEFAULT_OWNER_CHANNEL_TYPE = 5
-DEFAULT_MAIN_CHANNEL_ID = "506434bca8944409a2c9671d530ed460"
-DEFAULT_MAIN_CHANNEL_TYPE = 2
+DEFAULT_FEEDBACK_SHEET_DOC_ID = "d_a47749dd0a79f2f2e2528f4e"
 OWNER = {"uid": "0cb0e235d14443d88f8803f54e19faf4", "name": "郭尘泽"}
+CHIEF_EXAMINER = {"enabled": False, "uid": "", "name": ""}
+STRUCTURED_MENTION_RE = re.compile(r"@\[([\w.\-]+):([^\]\n]+)\]")
 
 STATUS_LABELS = {
     "status/new",
@@ -157,11 +159,11 @@ def load_ledger(path: str) -> dict[int, dict[str, Any]]:
 
 
 def mention(person: dict[str, str]) -> str:
-    """Management-thread mention syntax.
+    """Octo user mention syntax.
 
-    This is only for owner/management messages. User-facing messages sent via
-    octo-cli raw payload should not use the bracket mention form because it may
-    render as the literal internal id in some clients.
+    Octo only creates a real notification mention when the outgoing text uses
+    the canonical bracket form with the member uid. A plain ``@name`` is just
+    display text and will not notify the user.
     """
     uid = person.get("uid") or ""
     name = person.get("name") or ""
@@ -173,8 +175,55 @@ def mention(person: dict[str, str]) -> str:
 
 
 def display_name(person: dict[str, str]) -> str:
-    name = person.get("name") or "反馈人"
-    return name if name.startswith("@") else f"@{name}"
+    return mention(person)
+
+
+def chief_examiner_mention() -> str:
+    """Return the configured chief-examiner mention, or empty for fallback mode.
+
+    FDE exam rule: once the user tells us who the chief examiner is, every
+    user-facing exam-group progress/closure notice should also @ the chief
+    examiner. Before that information is configured, keep the existing default
+    behavior and do not invent a chief examiner mention.
+    """
+    if not CHIEF_EXAMINER.get("enabled"):
+        return ""
+    uid = str(CHIEF_EXAMINER.get("uid") or "")
+    name = str(CHIEF_EXAMINER.get("name") or "")
+    if not uid or not name:
+        return ""
+    return mention({"uid": uid, "name": name})
+
+
+def utf16_len(s: str) -> int:
+    return len(s.encode("utf-16-le")) // 2
+
+
+def octo_text_payload(content: str) -> dict[str, Any]:
+    """Convert @[uid:name] markers into Octo text + mention entities.
+
+    OpenClaw's message tool performs this conversion before calling the Octo
+    API. This watcher bypasses OpenClaw and sends via `octo-cli message send`,
+    so it must provide `payload.mention` itself; otherwise @name is only text.
+    """
+    out = ""
+    cursor = 0
+    entities: list[dict[str, Any]] = []
+    uids: list[str] = []
+    for m in STRUCTURED_MENTION_RE.finditer(content):
+        out += content[cursor:m.start()]
+        uid, name = m.group(1), m.group(2)
+        replacement = f"@{name}"
+        entities.append({"uid": uid, "offset": utf16_len(out), "length": utf16_len(replacement)})
+        if uid not in uids:
+            uids.append(uid)
+        out += replacement
+        cursor = m.end()
+    out += content[cursor:]
+    payload: dict[str, Any] = {"type": 1, "content": out}
+    if entities:
+        payload["mention"] = {"uids": uids, "entities": entities}
+    return {"payload": payload}
 
 
 def diff_event(previous: dict[str, Any] | None, current: dict[str, Any], ledger: dict[str, Any]) -> dict[str, Any] | None:
@@ -232,9 +281,9 @@ def owner_message(ev: dict[str, Any]) -> str:
     loop = ledger.get("loop_task_key") or ledger.get("loop_task_id") or "未找到 Loop 映射"
     stage = ev.get("stage") or "普通状态变化"
     next_action = {
-        "accepted": "阶段性闭环：负责人已知；最长 Bot 回原群同步“已采纳/等待实现”；Loop 进入 blocked(waiting_on=upstream_implementation)，不是最终完成。",
-        "done": "最终闭环：同步负责人，并由最长 Bot 回原群通知已完成/关闭。",
-        "wontfix": "最终闭环：同步负责人，并由最长 Bot 回原群通知暂不处理。",
+        "accepted": "阶段性闭环：负责人已知；Gcz-产品管家-FDE-exam 回原群同步“已采纳/等待实现”；Loop 进入 blocked(waiting_on=upstream_implementation)，不是最终完成。",
+        "done": "最终闭环：同步负责人，并由Gcz-产品管家-FDE-exam 回原群通知已完成/关闭。",
+        "wontfix": "最终闭环：同步负责人，并由Gcz-产品管家-FDE-exam 回原群通知暂不处理。",
         "in_progress": "处理进展：同步负责人，继续等待实现/后续状态。",
         "triaged": "分诊进展：同步负责人，等待 PM/QC 或实现侧继续推进。",
     }.get(stage, "管理同步：记录考官/PM 在需求池中的静默操作，必要时产品管家继续跟进。")
@@ -250,10 +299,29 @@ def owner_message(ev: dict[str, Any]) -> str:
     )
 
 
+def user_destination(ev: dict[str, Any]) -> tuple[str, int]:
+    """Return where user-facing notices should go.
+
+    There is no global main group. Progress/closure must go back to the
+    original feedback source channel recorded in ledger at intake time.
+    """
+    led = ev.get("ledger") or {}
+    channel_id = str(led.get("source_channel_id") or "")
+    try:
+        channel_type = int(led.get("source_channel_type") or 0)
+    except Exception:
+        channel_type = 0
+    return channel_id, channel_type
+
+
 def user_message(ev: dict[str, Any]) -> str:
     cur = ev["current"]
     people = (ev.get("ledger") or {}).get("feedbackers") or []
-    targets = "、".join(display_name(p) for p in people) if people else "@反馈人"
+    target_parts = [display_name(p) for p in people] if people else ["@反馈人"]
+    chief = chief_examiner_mention()
+    if chief and chief not in target_parts:
+        target_parts.append(chief)
+    targets = "、".join(target_parts)
     title = cur.get("title") or "这条反馈"
     if ev.get("stage") == "accepted":
         return (
@@ -277,13 +345,22 @@ def user_message(ev: dict[str, Any]) -> str:
 
 
 def send_octo(channel_id: str, channel_type: int, content: str) -> None:
-    body = {"payload": {"type": 1, "content": content}}
-    run([
-        "octo-cli", "--profile", "changming", "message", "send",
+    body = octo_text_payload(content)
+    # Never default to another bot profile. This watcher belongs to
+    # Gcz-产品管家-FDE-exam. A valid credential for this bot must be
+    # configured explicitly via FDE_OCTO_PROFILE or FDE_OCTO_BOT_ID; otherwise
+    # fail instead of sending user-facing messages as changming/longest bot.
+    bot_id = os.environ.get("FDE_OCTO_BOT_ID", "286xqdrbrou92265c5d_bot")
+    # Every backend octo-cli call must assert this bot id; machines may hold
+    # multiple bot profiles and omitting --bot-id can act as the wrong bot.
+    cmd = ["octo-cli", "--bot-id", bot_id]
+    cmd += [
+        "message", "send",
         "--channel-id", channel_id,
         "--channel-type", str(channel_type),
         "--data", json.dumps(body, ensure_ascii=False),
-    ])
+    ]
+    run(cmd)
 
 
 def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
@@ -366,6 +443,74 @@ def loop_update(ev: dict[str, Any], *, workspace_id: str) -> list[str]:
     return actions
 
 
+def sync_feedback_sheet(ev: dict[str, Any], *, doc_id: str, bot_id: str) -> dict[str, Any]:
+    """Best-effort status update to the human-readable Octo Docs spreadsheet."""
+    if not doc_id:
+        return {"enabled": True, "synced": False, "error": "missing_feedback_sheet_doc_id"}
+    led = ev.get("ledger") or {}
+    cur = ev.get("current") or {}
+    stage = ev.get("stage") or ""
+    feedback_seq = led.get("feedback_seq") or ""
+    if not feedback_seq:
+        return {"enabled": True, "synced": False, "error": "missing_feedback_seq"}
+
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    recent = {
+        "accepted": "已采纳，等待实现/排期。",
+        "in_progress": "已进入处理流程，等待后续状态变化。",
+        "triaged": "已完成分诊，等待 PM/专家团继续处理。",
+        "done": "已修复/关闭，进入最终闭环。",
+        "wontfix": "本次暂不处理，已记录结论。",
+    }.get(stage, "需求池状态已更新。")
+    next_step = {
+        "accepted": "等待上游实现/排期；有最终结果后回原群闭环。",
+        "in_progress": "继续跟进处理进展。",
+        "triaged": "等待 PM/专家团结论。",
+        "done": "已回告或待回告原始反馈人。",
+        "wontfix": "已回告或待回告原始反馈人。",
+    }.get(stage, "继续观察 GitHub/Loop 状态。")
+
+    payload = {
+        "feedback_seq": feedback_seq,
+        "status": stage or (cur.get("status") or cur.get("state") or ""),
+        "recent_progress": recent,
+        "next_step": next_step,
+        "user_notified_stage": stage if stage in {"accepted", "done", "wontfix"} else "",
+        "last_user_notify_time": now if stage in {"accepted", "done", "wontfix"} else "",
+        "closed_at": now if stage in {"done", "wontfix"} else "",
+    }
+    script = pathlib.Path(__file__).with_name("feedback_sheet_sync.py")
+    if not script.exists():
+        return {"enabled": True, "synced": False, "error": f"missing script: {script}"}
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as f:
+        json.dump(payload, f, ensure_ascii=False)
+        payload_path = f.name
+    try:
+        r = run([
+            sys.executable, str(script),
+            "--payload", payload_path,
+            "--doc-id", doc_id,
+            "--bot-id", bot_id,
+        ], check=False)
+    finally:
+        try:
+            os.unlink(payload_path)
+        except OSError:
+            pass
+    result: dict[str, Any] = {
+        "enabled": True,
+        "synced": r.returncode == 0,
+        "doc_id": doc_id,
+        "returncode": r.returncode,
+        "stderr_tail": (r.stderr or "")[-500:],
+    }
+    try:
+        result["detail"] = json.loads(r.stdout or "{}")
+    except Exception:
+        result["stdout_tail"] = (r.stdout or "")[-500:]
+    return result
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=DEFAULT_CHANNEL_CONFIG, help="FDE channel/workspace config JSON")
@@ -375,10 +520,12 @@ def main() -> None:
     ap.add_argument("--loop-workspace-id")
     ap.add_argument("--owner-channel-id")
     ap.add_argument("--owner-channel-type", type=int)
-    ap.add_argument("--main-channel-id")
-    ap.add_argument("--main-channel-type", type=int)
+    ap.add_argument("--main-channel-id", help=argparse.SUPPRESS)
+    ap.add_argument("--main-channel-type", type=int, help=argparse.SUPPRESS)
     ap.add_argument("--owner-name")
     ap.add_argument("--owner-uid")
+    ap.add_argument("--feedback-sheet-doc-id")
+    ap.add_argument("--no-feedback-sheet", action="store_true")
     ap.add_argument("--limit", type=int, default=100)
     ap.add_argument("--init", action="store_true", help="snapshot current state and send/update nothing")
     ap.add_argument("--send", action="store_true", help="send owner/user messages through octo-cli")
@@ -390,11 +537,16 @@ def main() -> None:
     args.loop_workspace_id = args.loop_workspace_id or cfg_get(cfg, "loop", "workspace_id", DEFAULT_LOOP_WORKSPACE_ID)
     args.owner_channel_id = args.owner_channel_id or cfg_get(cfg, "owner_thread", "channel_id", DEFAULT_OWNER_CHANNEL_ID)
     args.owner_channel_type = args.owner_channel_type or int(cfg_get(cfg, "owner_thread", "channel_type", DEFAULT_OWNER_CHANNEL_TYPE))
-    args.main_channel_id = args.main_channel_id or cfg_get(cfg, "main_group", "channel_id", DEFAULT_MAIN_CHANNEL_ID)
-    args.main_channel_type = args.main_channel_type or int(cfg_get(cfg, "main_group", "channel_type", DEFAULT_MAIN_CHANNEL_TYPE))
     owner_name = args.owner_name or cfg_get(cfg, "owner", "name", OWNER["name"])
     owner_uid = args.owner_uid or cfg_get(cfg, "owner", "uid", OWNER["uid"])
+    args.feedback_sheet_doc_id = args.feedback_sheet_doc_id or cfg_get(cfg, "feedback_sheet", "doc_id", DEFAULT_FEEDBACK_SHEET_DOC_ID)
     OWNER.update({"name": owner_name, "uid": owner_uid})
+    chief_cfg = cfg.get("chief_examiner") or {}
+    CHIEF_EXAMINER.update({
+        "enabled": bool(chief_cfg.get("enabled")) and bool(chief_cfg.get("uid")) and bool(chief_cfg.get("name")),
+        "uid": str(chief_cfg.get("uid") or ""),
+        "name": str(chief_cfg.get("name") or ""),
+    })
 
     # Prevent cron/manual overlap from emitting duplicate owner/user notices or
     # duplicate Loop comments for the same GitHub transition.
@@ -412,7 +564,8 @@ def main() -> None:
     previous_state = load_json(args.state_file, {})
 
     if args.init or not previous_state:
-        save_json(args.state_file, current)
+        if not args.dry_run:
+            save_json(args.state_file, current)
         print(json.dumps({"ok": True, "init": True, "count": len(current)}, ensure_ascii=False, indent=2))
         return
 
@@ -426,6 +579,39 @@ def main() -> None:
     actions: list[dict[str, Any]] = []
     notified = load_json(args.state_file + ".notified", {})
     user_notified = load_json(args.state_file + ".user_notified", {})
+
+    # Backfill user-facing notices that were missed because the GitHub transition
+    # was detected before ledger contained the original feedbacker mapping. This
+    # happens when issue state/labels change quickly after intake, or when the
+    # runner path and the active workspace path briefly diverge. Owner transition
+    # notices may already be marked in .notified, but user notices are governed by
+    # .user_notified (issue + stage). If ledger is now available and the stage is
+    # user-visible, emit one synthetic event so the original feedbacker gets the
+    # short progress/closure template exactly once.
+    for key, cur in current.items():
+        stage = stage_for(cur.get("state") or "", cur.get("status") or "")
+        if stage not in {"accepted", "done", "wontfix"}:
+            continue
+        if stage in set((user_notified.get(key) or [])):
+            continue
+        led = ledger.get(int(key), {})
+        if not (led.get("feedbackers") or []):
+            continue
+        if any(ev.get("number") == int(key) and ev.get("stage") == stage for ev in events):
+            continue
+        events.append({
+            "number": int(key),
+            "title": cur.get("title") or "",
+            "url": cur.get("url") or "",
+            "previous": cur,
+            "current": cur,
+            "added_labels": [],
+            "removed_labels": [],
+            "stage": stage,
+            "reasons": ["user-notice-backfill:ledger-now-available"],
+            "ledger": led,
+        })
+
     for ev in events:
         key = str(ev["number"])
         stage = ev.get("stage") or "generic"
@@ -441,26 +627,46 @@ def main() -> None:
         # records are treated as already sent so adding this guard does not resend
         # old closures after deployment.
         sent_user_stages = set(user_notified.get(key, []))
+        # Older deployments stored user-facing notices only in the per-transition
+        # .notified file. Treat those as already sent so a code rollout or state
+        # repair does not resurrect old accepted/done closures.
         legacy_user_already = any(f"|{stage}|" in item for item in legacy_notices)
         user_already = stage in sent_user_stages or legacy_user_already
 
         loop_actions: list[str] = []
+        send_errors: list[str] = []
+        sheet_sync: dict[str, Any] = {"enabled": not args.no_feedback_sheet, "synced": False, "reason": "not_run"}
         if not already and args.loop and not args.dry_run:
             loop_actions = loop_update(ev, workspace_id=args.loop_workspace_id)
+        if not already and not args.no_feedback_sheet and not args.dry_run:
+            sheet_sync = sync_feedback_sheet(
+                ev,
+                doc_id=args.feedback_sheet_doc_id,
+                bot_id=os.environ.get("FDE_OCTO_BOT_ID", "286xqdrbrou92265c5d_bot"),
+            )
         if not already and args.send and not args.dry_run:
-            send_octo(args.owner_channel_id, args.owner_channel_type, owner)
+            try:
+                send_octo(args.owner_channel_id, args.owner_channel_type, owner)
+            except Exception as e:
+                send_errors.append(f"owner_send_failed:{e}")
         user_sent = False
+        user_channel_id, user_channel_type = user_destination(ev)
         if (
             user
             and (ev.get("ledger") or {}).get("feedbackers")
+            and user_channel_id
+            and user_channel_type
             and not user_already
             and args.send
             and not args.dry_run
         ):
-            send_octo(args.main_channel_id, args.main_channel_type, user)
-            sent_user_stages.add(stage)
-            user_notified[key] = sorted(sent_user_stages)
-            user_sent = True
+            try:
+                send_octo(user_channel_id, user_channel_type, user)
+                sent_user_stages.add(stage)
+                user_notified[key] = sorted(sent_user_stages)
+                user_sent = True
+            except Exception as e:
+                send_errors.append(f"user_send_failed:{e}")
         if not already:
             notified.setdefault(key, []).append(notify_key)
         actions.append({
@@ -469,15 +675,19 @@ def main() -> None:
             "reasons": ev["reasons"],
             "owner_message": owner,
             "user_message": user,
+            "user_destination": {"channel_id": user_destination(ev)[0], "channel_type": user_destination(ev)[1]},
             "user_already_notified": user_already,
             "user_sent": user_sent,
             "loop_actions": loop_actions,
+            "feedback_sheet": sheet_sync,
             "already_notified": already,
+            "send_errors": send_errors,
         })
 
-    save_json(args.state_file, current)
-    save_json(args.state_file + ".notified", notified)
-    save_json(args.state_file + ".user_notified", user_notified)
+    if not args.dry_run:
+        save_json(args.state_file, current)
+        save_json(args.state_file + ".notified", notified)
+        save_json(args.state_file + ".user_notified", user_notified)
     print(json.dumps({"ok": True, "events": actions}, ensure_ascii=False, indent=2))
 
 

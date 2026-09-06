@@ -1,6 +1,6 @@
 # FDE 新考试群迁移 / 初始化流程
 
-适用场景：考官新建考试群，郭尘泽只负责把最长 Bot 拉进新群。此时旧群的 `GROUP.md` / `THREAD.md` 不会自动继承，必须把可迁移配置写入仓库并同步到新群。
+适用场景：考官新建考试群，郭尘泽只负责把 Gcz-产品管家-FDE-exam 拉进新群。此时旧群的 `GROUP.md` / `THREAD.md` 不会自动继承，必须把可迁移配置写入仓库并同步到新群。
 
 ## 设计原则
 
@@ -45,12 +45,13 @@ config/fde_channels.json
 把 `templates/GROUP-FDE.md` 中的占位符替换成 `config/fde_channels.json` 里的值，然后写到新主群 GROUP.md。
 
 必须包含：
-- 最长 Bot 是唯一前台产品管家。
-- 新反馈先复述确认，再归档。
+- Gcz-产品管家-FDE-exam 是唯一前台产品管家。
+- 新消息先分诊：区分使用咨询、已知问题、环境/凭证/网络、Bug、Feature、Docs/Help、状态变化通知、非 octo-cli 范围。
+- 咨询先回答，排障先给步骤，Bug 先收复现信息，Feature/Docs 先确认边界；只有需要进入反馈闭环时才复述确认，再归档。
 - `product_feedback_intake.py` 是唯一归档入口。
 - accepted 是阶段性闭环，不是 done。
 - watcher 会检测 GitHub 静默操作。
-- 管理汇总发负责人子区，主群只发用户视角反馈。
+- 管理汇总发负责人子区，原始反馈群只发用户视角反馈。
 
 ### 4. 同步负责人子区 THREAD.md
 
@@ -109,7 +110,7 @@ FDE_CHANNEL_CONFIG=config/fde_channels.exam2.json scripts/exam_issue_watch_once.
 
 ## 无管理员权限模式（你和 Bot 都不是管理员）
 
-如果考官创建群后，郭尘泽只是把最长 Bot 拉进群，而你和 Bot 都没有管理权限，则可能无法：
+如果考官创建群后，郭尘泽只是把Gcz-产品管家-FDE-exam 拉进群，而你和 Bot 都没有管理权限，则可能无法：
 
 - 写主群 GROUP.md；
 - 创建负责人反馈子区；
@@ -122,9 +123,9 @@ FDE_CHANNEL_CONFIG=config/fde_channels.exam2.json scripts/exam_issue_watch_once.
 
 ```text
 考官建群
-  → 郭尘泽拉最长 Bot 入群
+  → 郭尘泽拉 Gcz-产品管家-FDE-exam 入群
   → 郭尘泽在群里发 FDE portable 启动口令
-  → 最长 Bot 读取仓库里的规则和配置
+  → Gcz-产品管家-FDE-exam 读取仓库里的规则和配置
   → 当前群作为 main_group
   → 负责人同步如果没有子区，则退回郭尘泽私聊/DM
   → watcher 继续扫描 GitHub 需求池并做闭环
@@ -132,7 +133,7 @@ FDE_CHANNEL_CONFIG=config/fde_channels.exam2.json scripts/exam_issue_watch_once.
 
 ### 启动口令
 
-在新群里 @ 最长 Bot，发：
+在新群里 @ Gcz-产品管家-FDE-exam，发：
 
 ```text
 启动 FDE portable mode：当前群作为考试主群；如果没有负责人子区，负责人同步先走郭尘泽私聊。读取 /home/mlclaw/.openclaw/workspace/octo-cli-product-hub/docs/new-exam-group-migration.md 和 config/fde_channels.json，完成初始化。
@@ -179,7 +180,7 @@ Bot 收到后应：
 1. 负责人反馈子区（如果存在且可写）；
 2. 郭尘泽 DM（无管理员权限默认降级）；
 3. GitHub issue / Loop comment（兜底审计记录）；
-4. 主群只发用户可见的阶段性/最终闭环，不刷管理细节。
+4. 原始反馈群只发用户可见的阶段性/最终闭环，不刷管理细节。
 
 ### 关键原则
 
@@ -194,9 +195,9 @@ Bot 收到后应：
 
 ### 可以自动进入 portable mode 的情况
 
-如果最长 Bot 被拉进一个没有旧 GROUP.md 的新群，只要出现以下任一信号，就应该主动读取本手册并进入 portable 判断：
+如果 Gcz-产品管家-FDE-exam 被拉进一个没有旧 GROUP.md 的新群，只要出现以下任一信号，就应该主动读取本手册并进入 portable 判断：
 
-- 用户 @ 最长 Bot 询问/反馈 `octo-cli`；
+- 用户 @ Gcz-产品管家-FDE-exam 询问/反馈；
 - 群里出现 `FDE`、`考试`、`需求池`、`octo-cli 产品反馈`、`Loop` 等明显关键词；
 - 用户说“提个问题/反馈一个问题/帮我记录/建单/归档”，且上下文指向 octo-cli；
 - 郭尘泽在新群里要求处理产品反馈，即使没说“启动 FDE portable mode”。
@@ -229,7 +230,7 @@ Bot 收到后应：
 ### 推荐策略
 
 - 最稳：郭尘泽发启动口令。
-- 次稳：第一条反馈里 @ 最长 Bot，并出现 `octo-cli` / `FDE` / `考试` 关键词。
+- 次稳：第一条反馈里 @ Gcz-产品管家-FDE-exam；不要求显式出现 `octo-cli` / `FDE` / `考试` 关键词。
 - 兜底：如果 Bot 开始按普通群聊回答，郭尘泽补一句“这是 FDE 考试群，进入 portable mode”。
 
 ## 提前知道群聊名字是否有用
@@ -268,3 +269,28 @@ Bot 收到后应把群名写入 `config/fde_channels.json` 的候选识别字段
 ```
 
 真正入群后，仍以当前群实际 `channel_id` 更新 `main_group.channel_id`，不要只靠名字。
+
+
+## 来源群回告规则
+不再使用固定“主群”承载用户侧通知。每条反馈归档时必须记录 `source_channel_id`、`source_channel_type`、`source_channel_name`。后续 accepted / done / wontfix 的用户侧进展和闭环通知，必须发送回这条反馈的原始来源群/会话。负责人反馈子区仍保留为管理同步通道。若历史反馈缺少来源字段，只能对已知历史记录做一次性 backfill；新反馈缺少来源字段时不得发送用户侧通知到默认群。
+
+归档脚本调用必须显式带上来源群/会话：
+
+```bash
+python3 scripts/product_feedback_intake.py \
+  ... \
+  --source-channel-id "<当前反馈所在群/会话 channel_id>" \
+  --source-channel-type "<当前反馈所在 channel_type：群=2，子区=5，DM=1>" \
+  --source-channel-name "<当前反馈所在群/会话名；没有名称可填 channel_id>"
+```
+
+同时必须用当前消息 sender 记录真实反馈人：
+
+```bash
+  --feedbacker "<当前发言人显示名>" \
+  --feedbacker-uid "<当前发言人 uid>"
+```
+
+不要把 `owner.uid` / 郭尘泽当成默认反馈人。负责人只是管理通知接收人；原始反馈人可能是任意群成员，后续 accepted / done / wontfix 回告和真实 @ 都必须基于本条 ledger 记录的 `feedbacker_uid`。
+
+巡检/闭环脚本只读取 ledger/Loop metadata 里的 `source_channel_*` 作为用户通知目的地，不再使用 `main_group` 兜底发送用户侧通知。

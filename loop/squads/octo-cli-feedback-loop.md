@@ -4,7 +4,7 @@
 
 目标：把 octo-cli 用户反馈从主群自然语言转成可追踪、可判断、可关闭、可回访的闭环。
 
-流程：最长 Bot 前台短回执 → 后台查重 → GitHub issue + Loop task 互写 → PM 判断 → QC 检查 → 负责人区管理同步 → 原群用户闭环。
+流程：Gcz-产品管家-FDE-exam 前台短回执 → 后台查重 → GitHub issue + Loop task 互写 → PM 判断 → QC 检查 → 负责人区管理同步 → 原群用户闭环。
 
 硬规则：
 - 主群先 5~10 秒短回执，长链路后台异步。
@@ -13,6 +13,20 @@
 - GitHub issue 必须写 Loop task id/key、title、feedback_seq、feedbacker_name/uid。
 - 产品反馈归档唯一入口：`/home/mlclaw/.openclaw/workspace/octo-cli-product-hub/scripts/product_feedback_intake.py`。创建/追加反馈必须走它，不能手工拆步骤；脚本会创建/追加 GitHub issue、创建并指派 Loop 父任务、写 metadata/ledger、回写 GitHub，并验证出现 run。
 - 目标仓库只读；需求池可写；不记录任何秘密。
+
+## PRD / Review 打回闭环
+
+专家团处理 PRD、产品判断、验收标准 review 时，固定使用以下闭环：
+
+```text
+PM draft/revision → QC review → changes-requested 或 pass → GitHub 执行
+```
+
+- PM 专家：主笔和修订产品定义/PRD/验收标准；收到 `changes-requested` 后按打回原因逐条修改，再提交 QC 复核。
+- QC 专家：独立 review；不合格时输出 `changes-requested` + 明确打回原因 + 修订要求；不作为主要修改方。
+- GitHub 专家：执行落库、评论、label/status；QC 打回时标 `status/changes-requested`，PM 修订后待复核可标 `status/reviewing`，QC pass 后才能标 `status/accepted`。
+- 产品管家/Leader：负责调度，不允许 `QC changes-requested → GitHub accepted` 跳步；必须先 `QC changes-requested → PM 修订 → QC 复核 → GitHub 执行`。
+- `changes-requested` 不是最终关闭，也不是 wontfix；它表示 review 返工中。
 
 ## 考试外部操作 watcher（必须知道）
 
@@ -36,4 +50,3 @@ python3 scripts/exam_issue_watcher.py --send --loop
 - `status/wontfix` = 最终不处理闭环：Loop cancelled，并回主群说明暂不处理。
 
 注意：`octo-cli loop task get/list` 对历史 FDE-2 返回 404 不等于任务没有执行；必要时以 `octo-daemon` issue/task 视图和 daemon journal 作为执行证据。不要因此重建 FDE-1/FDE-2 或重复处理 GitHub issue #3。
-

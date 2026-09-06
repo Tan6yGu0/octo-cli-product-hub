@@ -76,8 +76,13 @@ def load_feedbackers(path: str) -> dict[int, list[dict[str, str]]]:
 
 
 def display_name(person: dict[str, str]) -> str:
-    name = person.get("name") or "反馈人"
-    return name if name.startswith("@") else f"@{name}"
+    uid = person.get("uid") or ""
+    name = person.get("name") or ""
+    if uid and name:
+        return f"@[{uid}:{name}]"
+    if name:
+        return f"@{name}"
+    return "@反馈人"
 
 
 def status_label(issue: dict[str, Any]) -> str:
