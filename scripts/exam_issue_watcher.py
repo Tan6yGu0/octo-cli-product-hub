@@ -623,28 +623,28 @@ def main() -> None:
 
         # Owner/management notices are per GitHub transition. User-facing closure
         # notices are per issue+stage. This prevents repeated "done" messages when
-        # a closed issue receives later label/comment churn. Legacy transition
-        # records are treated as already sent so adding this guard does not resend
-        # old closures after deployment.
+        # a closed issue receives later label/comment churn.
         sent_user_stages = set(user_notified.get(key, []))
-        # Older deployments stored user-facing notices only in the per-transition
-        # .notified file. Treat those as already sent so a code rollout or state
-        # repair does not resurrect old accepted/done closures.
-        legacy_user_already = any(f"|{stage}|" in item for item in legacy_notices)
-        user_already = stage in sent_user_stages or legacy_user_already
+        # Do NOT treat owner/transition notices in `.notified` as proof that the
+        # user-facing notice was delivered. A transition may have been detected
+        # before ledger contained feedbacker/source-channel data; in that case
+        # the owner was informed but the original feedbacker still needs the
+        # short accepted/done/wontfix message once ledger is repaired.
+        user_already = stage in sent_user_stages
+        is_user_notice_backfill = ev.get("reasons") == ["user-notice-backfill:ledger-now-available"]
 
         loop_actions: list[str] = []
         send_errors: list[str] = []
         sheet_sync: dict[str, Any] = {"enabled": not args.no_feedback_sheet, "synced": False, "reason": "not_run"}
-        if not already and args.loop and not args.dry_run:
+        if not already and not is_user_notice_backfill and args.loop and not args.dry_run:
             loop_actions = loop_update(ev, workspace_id=args.loop_workspace_id)
-        if not already and not args.no_feedback_sheet and not args.dry_run:
+        if not already and not is_user_notice_backfill and not args.no_feedback_sheet and not args.dry_run:
             sheet_sync = sync_feedback_sheet(
                 ev,
                 doc_id=args.feedback_sheet_doc_id,
                 bot_id=os.environ.get("FDE_OCTO_BOT_ID", "286xqdrbrou92265c5d_bot"),
             )
-        if not already and args.send and not args.dry_run:
+        if not already and not is_user_notice_backfill and args.send and not args.dry_run:
             try:
                 send_octo(args.owner_channel_id, args.owner_channel_type, owner)
             except Exception as e:
