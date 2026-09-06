@@ -76,5 +76,6 @@ fi
 
 if ! python3 scripts/exam_issue_watcher.py --config "$CHANNEL_CONFIG" --send --loop >>"$LOG_DIR/exam-issue-watcher.log" 2>>"$LOG_DIR/exam-issue-watcher.err.log"; then
   err=$(tail -c 500 "$LOG_DIR/exam-issue-watcher.err.log" | tr '\n' ' ')
-  notify_error "watcher" "$OWNER [产品管家] 需求池外部操作扫描异常/可能限流：已停止本轮扫描，不做高频重试。${err:+ 错误：$err}"
+  echo "$(date -Is) ERROR watcher skipped this run; detail: $err" >>"$LOG_DIR/exam-issue-watcher.log"
+  notify_error "watcher" "$OWNER [产品管家] GitHub 暂时连接超时或接口不可用，本轮需求池扫描已跳过，等待下次定时扫描自动恢复；不会高频重试刷接口。"
 fi
